@@ -13,40 +13,78 @@ OPSEE uses a **simplified, direct integration** approach with pyDEXPI for parsin
 ## Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                 User Input (Notebook)               │
-├─────────────────────────────────────────────────────┤
-│  • General metadata (title, authors, license)      │
-│  • DEXPI file path                                  │
-│  • Experiment parameters (YAML)                     │
-│  • Data files + instrument links                    │
-│  • Engineering assets + equipment links             │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                   User Input (Notebook)                     │
+├─────────────────────────────────────────────────────────────┤
+│  1. Output directory selection (where crate will be created)│
+│  2. General metadata (title, authors, license)              │
+│  3. DEXPI file path (from anywhere on filesystem)           │
+│  4. Experiment parameters (YAML)                            │
+│  5. Data files + instrument links (from anywhere)           │
+│  6. Engineering assets + equipment links (from anywhere)    │
+└─────────────────────────────────────────────────────────────┘
                         ↓
-┌─────────────────────────────────────────────────────┐
-│           pyDEXPI (ProteusSerializer)               │
-├─────────────────────────────────────────────────────┤
-│  Parses DEXPI XML → DexpiModel object              │
-│  • conceptualModel.taggedPlantItems (equipment)     │
-│  • conceptualModel.actuatingSystems (instruments)   │
-│  • conceptualModel.processSignalGeneratingSystems   │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│           pyDEXPI (ProteusSerializer)                       │
+├─────────────────────────────────────────────────────────────┤
+│  Parses DEXPI XML → DexpiModel object                      │
+│  • conceptualModel.taggedPlantItems (equipment)             │
+│  • conceptualModel.actuatingSystems (instruments)           │
+│  • conceptualModel.processSignalGeneratingSystems           │
+└─────────────────────────────────────────────────────────────┘
                         ↓
-┌─────────────────────────────────────────────────────┐
-│         Inline Helper Functions (Notebook)          │
-├─────────────────────────────────────────────────────┤
-│  extract_equipment(dexpi_model) → dict              │
-│  extract_instruments(dexpi_model) → dict            │
-│                                                      │
-│  Simple extraction to dictionary format:            │
-│  {                                                   │
-│    'id': 'uuid',                                    │
-│    'tag_name': 'R-101',                             │
-│    'type': 'Reactor',                               │
-│    'name': 'Main Reactor'                           │
-│  }                                                   │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│         Inline Helper Functions (Notebook)                  │
+├─────────────────────────────────────────────────────────────┤
+│  extract_equipment(dexpi_model) → dict                      │
+│  extract_instruments(dexpi_model) → dict                    │
+│                                                              │
+│  Simple extraction to dictionary format:                    │
+│  {                                                           │
+│    'id': 'uuid',                                            │
+│    'tag_name': 'R-101',                                     │
+│    'type': 'Reactor',                                       │
+│    'name': 'Main Reactor'                                   │
+│  }                                                           │
+└─────────────────────────────────────────────────────────────┘
                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│           RO-Crate Builder (rocrate_builder.py)             │
+├─────────────────────────────────────────────────────────────┤
+│  OPSEECrateBuilder(output_dir):                             │
+│    • Creates RO-Crate directory structure                   │
+│    • COPIES all files into crate (self-contained!)          │
+│    • Links data files to instruments                        │
+│    • Links assets to equipment                              │
+│    • Generates semantic metadata                            │
+│                                                              │
+│  Key method: _copy_and_add_file()                           │
+│    → Copies source file to output_dir/relative_path         │
+│    → Adds File entity with relative path to metadata        │
+└─────────────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────────┐
+│              Self-Contained RO-Crate                        │
+├─────────────────────────────────────────────────────────────┤
+│  output_dir/                                                │
+│  ├── ro-crate-metadata.json  (all metadata)                │
+│  ├── ro-crate-preview.html   (human preview)               │
+│  └── data/                    (all copied files!)           │
+│      ├── engineering/                                        │
+│      │   └── setup.dexpi.xml  ← COPIED                     │
+│      └── experiments/                                        │
+│          ├── exp_1/                                         │
+│          │   ├── raw/         ← COPIED data files          │
+│          │   ├── processed/   ← COPIED                     │
+│          │   └── engineering/ ← COPIED CAD/drawings        │
+│          └── exp_2/                                         │
+│              └── ...                                         │
+│                                                              │
+│  ✅ Fully portable - can be moved/shared independently       │
+│  ✅ No broken links - all paths relative to crate root      │
+│  ✅ FAIR compliant - complete self-contained package        │
+└─────────────────────────────────────────────────────────────┘
+```
 ┌─────────────────────────────────────────────────────┐
 │              Data Storage (crate_data)              │
 ├─────────────────────────────────────────────────────┤
@@ -190,6 +228,7 @@ pyDEXPI → inline helpers → dict → rocrate_builder.py → RO-Crate
 - **Complexity reduced**: 1 fewer module, single dependency source
 - **Functionality preserved**: 100% - same output, simpler codebase
 - **Maintainability**: Direct pyDEXPI usage, easier to understand
+- **Portability added**: All files now copied into RO-Crate (self-contained!)
 
 ## Extension Points
 

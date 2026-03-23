@@ -63,18 +63,32 @@ pip install -e .
    ```
 
 2. **Follow the interactive workflow**:
+   - **Select output directory** - Where your RO-Crate will be created
    - Enter general RO-Crate metadata (title, authors, description)
    - Upload or reference your DEXPI XML file (parsed with **pyDEXPI** from [process-intelligence-research](https://github.com/process-intelligence-research/pyDEXPI))
    - Add 0 or more experiments with their parameters (YAML format)
    - Link analytical data files to instruments (from shared DEXPI)
    - Link CAD/geometry files to equipment (from shared DEXPI)
-   - Export the RO-Crate
+   - Export the RO-Crate - **all files are copied** into the output directory
 
-3. **Generated output**:
-   - `ro-crate-metadata.json` in the root
-   - Shared DEXPI file in `data/engineering/`
-   - Experiment data organized in `data/experiments/{exp_id}/`
-   - Preview HTML file for human-readable viewing
+3. **Generated output** (self-contained RO-Crate):
+   ```
+   my_rocrate/
+   ├── ro-crate-metadata.json      (all metadata)
+   ├── ro-crate-preview.html       (human-readable view)
+   └── data/                       (all copied files!)
+       ├── engineering/
+       │   └── setup.dexpi.xml     (copied DEXPI)
+       └── experiments/
+           ├── exp_1/
+           │   ├── raw/            (copied data files)
+           │   ├── processed/
+           │   └── engineering/    (copied CAD/drawings)
+           └── exp_2/
+               └── ...
+   ```
+   
+   ✅ **Fully portable** - can be moved, shared, or archived as a single package!
 
 ## Repository Structure
 

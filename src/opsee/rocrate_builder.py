@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 from datetime import datetime
 import logging
+import shutil
 
 from rocrate.rocrate import ROCrate
 from rocrate.model.person import Person
@@ -23,14 +24,23 @@ class OPSEECrateBuilder:
     Builder class for creating OPSEE-compliant RO-Crates.
     
     Implements the OPSEE RO-Crate profile for chemical and bioprocess
-    engineering experiments.
+    engineering experiments. Copies all referenced files into the RO-Crate
+    directory to create a self-contained, portable package.
     """
     
     PROFILE_URI = "https://w3id.org/opsee/ro-crate-profile/chemical-engineering/1.0"
     
-    def __init__(self):
-        """Initialize the crate builder."""
+    def __init__(self, output_dir: Optional[str] = None):
+        """Initialize the crate builder.
+        
+        Args:
+            output_dir: Directory where RO-Crate will be created.
+                       All referenced files will be copied into this directory.
+                       If None, defaults to current directory.
+        """
         self.crate = None
+        self.output_dir = Path(output_dir) if output_dir else Path('.')
+        self.copied_files = []  # Track copied files for logging
     
     def build_crate(self, crate_data: Dict) -> ROCrate:
         """
@@ -188,9 +198,87 @@ class OPSEECrateBuilder:
         if author_entities:
             self.crate.root_dataset['author'] = author_entities
     
+    def _copy_and_add_file(self, source_path: str, dest_relative_path: str, 
+                          properties: dict) -> File:
+        """Copy a file into the RO-Crate directory and add to metadata.
+        
+        This method ensures all files are physically copied into the RO-Crate,
+        making it self-contained and portable. The source file is copied to
+        the specified relative path within the output directory.
+        
+        Args:
+            source_path: Original file location (absolute or relative path)
+            dest_relative_path: Where to place in crate (e.g., 'data/raw/file.csv')
+            properties: Metadata properties for the file entity
+        
+        Returns:
+            File entity added to crate
+        
+        Raises:
+            FileNotFoundError: If source file doesn't exist
+            IOError: If file copy fails
+        """
+        source = Path(source_path)
+        dest = self.output_dir / dest_relative_path
+        
+        # Create parent directories
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Copy file if it exists
+        if source.exists():
+            shutil.copy2(source, dest)  # copy2 preserves metadata
+            self.copied_files.append((str(source), str(dest_relative_path)))
+            logger.info(f"Copied: {source.name} → {dest_relative_path}")
+        else:
+            logger.warning(f"Source file not found: {source}")
+            raise FileNotFoundError(f"Cannot copy non-existent file: {source}")
+        
+        # Add to RO-Crate with relative path (paths are relative within crate)
+        return self.crate.add_file(
+            str(dest_relative_path),
+            properties=properties
+        )
+    
+    def _get_media_type(self, file_path: str) -> str:
+        """Determine IANA media type from file extension.
+        
+        Args:
+            file_path: Path to file
+        
+        Returns:
+            IANA media type string
+        """
+        ext = Path(file_path).suffix.lower()
+        format_map = {
+            '.csv': 'text/csv',
+            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            '.xls': 'application/vnd.ms-excel',
+            '.txt': 'text/plain',
+            '.json': 'application/json',
+            '.xml': 'application/xml',
+            '.yaml': 'application/x-yaml',
+            '.yml': 'application/x-yaml',
+            '.step': 'application/step',
+            '.stp': 'application/step',
+            '.iges': 'application/iges',
+            '.igs': 'application/iges',
+            '.stl': 'model/stl',
+            '.dwg': 'application/acad',
+            '.dxf': 'application/dxf',
+            '.pdf': 'application/pdf',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.tiff': 'image/tiff',
+            '.tif': 'image/tiff'
+        }
+        return format_map.get(ext, 'application/octet-stream')
+    
     
     def _add_dexpi(self, dexpi_data: Dict):
         """Add single shared DEXPI file and equipment entities to the crate.
+        
+        Copies the DEXPI XML file into data/engineering/ directory within the crate.
         
         Args:
             dexpi_data: DEXPI data dictionary with equipment and instruments
@@ -199,18 +287,24 @@ class OPSEECrateBuilder:
         dexpi_path = dexpi_data.get('path')
         dexpi_file = None
         
-        if dexpi_path and Path(dexpi_path).exists():
-            dexpi_file = self.crate.add_file(
-                dexpi_path,
-                dest_path=f"data/engineering/{Path(dexpi_path).name}",
-                properties={
-                    '@type': ['File', 'SoftwareSourceCode'],
-                    'name': 'Process P&ID (DEXPI)',
-                    'description': 'DEXPI XML file containing process setup and instrumentation',
-                    'encodingFormat': 'application/xml',
-                    'conformsTo': 'https://www.dexpi.org/'
-                }
-            )
+        if dexpi_path:
+            dest_path = f"data/engineering/{Path(dexpi_path).name}"
+            try:
+                # Copy DEXPI file into crate
+                dexpi_file = self._copy_and_add_file(
+                    dexpi_path,
+                    dest_path,
+                    properties={
+                        '@type': ['File', 'SoftwareSourceCode'],
+                        'name': f'DEXPI P&ID: {Path(dexpi_path).stem}',
+                        'description': 'DEXPI XML file containing process setup and instrumentation',
+                        'encodingFormat': 'application/xml',
+                        'conformsTo': {'@id': 'https://www.dexpi.org/'}
+                    }
+                )
+            except FileNotFoundError as e:
+                logger.error(f"Failed to copy DEXPI file: {e}")
+                raise
         
         # Add equipment as contextual entities (shared across experiments)
         equipment = dexpi_data.get('equipment', {})
@@ -286,6 +380,9 @@ class OPSEECrateBuilder:
         """
         Add an analytical data file with links to shared instruments.
         
+        Copies the data file into the appropriate experiment directory within the crate.
+        Files are organized by experiment ID and processing status (raw vs processed).
+        
         Args:
             file_data: File metadata including path and instrument link
             dexpi_data: DEXPI data for resolving instrument references
@@ -293,26 +390,14 @@ class OPSEECrateBuilder:
         """
         file_path = file_data['path']
         
-        # Check if file exists, if not just reference it
+        # Prepare file properties
         properties = {
-            '@type': ['File', 'AnalyticalData'],
+            '@type': ['File', 'Dataset'],
             'name': Path(file_path).name,
             'description': file_data.get('description', ''),
-            'additionalType': file_data.get('data_type', 'RawData')
+            'additionalType': file_data.get('data_type', 'RawData'),
+            'encodingFormat': self._get_media_type(file_path)
         }
-        
-        # Add encoding format based on extension
-        # Uses IANA media types for standard file formats
-        ext = Path(file_path).suffix.lower()
-        format_map = {
-            '.csv': 'text/csv',
-            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            '.txt': 'text/plain',
-            '.json': 'application/json',
-            '.xml': 'application/xml'
-        }
-        if ext in format_map:
-            properties['encodingFormat'] = format_map[ext]
         
         # Determine destination path based on data type and experiment
         # Organizes files by experiment ID and processing status (raw vs processed)
@@ -330,12 +415,12 @@ class OPSEECrateBuilder:
             else:
                 dest_path = f"data/processed/{Path(file_path).name}"
         
-        # Add file to crate
-        if Path(file_path).exists():
-            data_file = self.crate.add_file(file_path, dest_path=dest_path, properties=properties)
-        else:
-            # File doesn't exist yet - add as reference
-            data_file = self.crate.add(File(self.crate, dest_path, properties=properties))
+        # Copy file into crate
+        try:
+            data_file = self._copy_and_add_file(file_path, dest_path, properties)
+        except FileNotFoundError as e:
+            logger.error(f"Failed to copy analytical file: {e}")
+            raise
         
         # Link to shared instrument (no experiment prefix since instruments are shared)
         instrument_id = file_data.get('instrument_id')
@@ -352,6 +437,9 @@ class OPSEECrateBuilder:
         """
         Add an engineering asset (CAD, drawing, etc.) with links to shared equipment.
         
+        Copies the asset file into the appropriate directory within the crate.
+        Assets are organized by experiment ID if provided.
+        
         Args:
             asset_data: Asset metadata including path and equipment link
             dexpi_data: DEXPI data for resolving equipment references
@@ -360,28 +448,12 @@ class OPSEECrateBuilder:
         asset_path = asset_data['path']
         
         properties = {
-            '@type': ['File', 'EngineeringAsset'],
+            '@type': ['File', 'DigitalDocument'],
             'name': Path(asset_path).name,
             'description': asset_data.get('description', ''),
-            'additionalType': asset_data.get('asset_type', 'CADModel')
+            'additionalType': asset_data.get('asset_type', 'EngineeringAsset'),
+            'encodingFormat': self._get_media_type(asset_path)
         }
-        
-        # Add encoding format based on extension
-        ext = Path(asset_path).suffix.lower()
-        format_map = {
-            '.step': 'application/step',
-            '.stp': 'application/step',
-            '.iges': 'application/iges',
-            '.igs': 'application/iges',
-            '.stl': 'model/stl',
-            '.dwg': 'application/acad',
-            '.dxf': 'application/dxf',
-            '.pdf': 'application/pdf',
-            '.jpg': 'image/jpeg',
-            '.png': 'image/png'
-        }
-        if ext in format_map:
-            properties['encodingFormat'] = format_map[ext]
         
         # Organize by experiment if ID provided
         if experiment_id:
@@ -389,12 +461,12 @@ class OPSEECrateBuilder:
         else:
             dest_path = f"data/engineering/{Path(asset_path).name}"
         
-        # Add file to crate
-        if Path(asset_path).exists():
-            asset_file = self.crate.add_file(asset_path, dest_path=dest_path, properties=properties)
-        else:
-            # File doesn't exist yet - add as reference
-            asset_file = self.crate.add(File(self.crate, dest_path, properties=properties))
+        # Copy file into crate
+        try:
+            asset_file = self._copy_and_add_file(asset_path, dest_path, properties)
+        except FileNotFoundError as e:
+            logger.error(f"Failed to copy engineering asset: {e}")
+            raise
         
         # Link to shared equipment (no experiment prefix since equipment is shared)
         equipment_id = asset_data.get('equipment_id')
