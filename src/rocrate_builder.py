@@ -35,7 +35,7 @@ class OPSEECrateBuilder:
     def build_crate(self, crate_data: Dict) -> ROCrate:
         """
         Build an RO-Crate from collected metadata.
-        Supports 0 to many experiments on a single experimental setup (one DEXPI file).
+        Supports zero to many experiments on a single experimental setup (one DEXPI file).
         
         Args:
             crate_data: Dictionary containing:
@@ -111,7 +111,20 @@ class OPSEECrateBuilder:
         return self.crate
     
     def _set_general_metadata(self, general: Dict):
-        """Set general crate-level metadata."""
+        """Set general crate-level metadata on root dataset.
+        
+        Populates the root dataset entity with general metadata including
+        name, description, keywords, license, and timestamps following
+        RO-Crate specification and Dublin Core terms.
+        
+        Args:
+            general: Dictionary containing general metadata fields:
+                - name: Human-readable crate name
+                - description: Detailed description of crate contents
+                - keywords: List of keywords for discovery
+                - license: License identifier (e.g., 'CC-BY-4.0')
+                - dateCreated: ISO 8601 formatted creation date
+        """
         root = self.crate.root_dataset
         
         if general.get('name'):
@@ -133,7 +146,19 @@ class OPSEECrateBuilder:
         root['dateModified'] = datetime.now().isoformat()
     
     def _add_authors(self, authors: List[Dict]):
-        """Add authors and contributors to the crate."""
+        """Add authors and contributors to the crate.
+        
+        Creates Person entities for each author with ORCID-based identifiers
+        where available. Links all authors to the root dataset following
+        schema.org and RO-Crate conventions.
+        
+        Args:
+            authors: List of dictionaries, each containing:
+                - name: Full name of the person (required)
+                - orcid: ORCID identifier without URL prefix (optional)
+                - affiliation: Organization affiliation (optional)
+                - role: Role in the research (e.g., 'Author', 'DataCollector')
+        """
         author_entities = []
         
         for author_data in authors:
@@ -190,6 +215,7 @@ class OPSEECrateBuilder:
         # Add equipment as contextual entities (shared across experiments)
         equipment = dexpi_data.get('equipment', {})
         for eq_id, eq_data in equipment.items():
+            # Create ProcessEquipment entity following schema.org vocabulary
             eq_entity = self.crate.add(ContextEntity(
                 self.crate,
                 f"#equipment-{eq_id}",
@@ -209,6 +235,7 @@ class OPSEECrateBuilder:
         # Add instruments as contextual entities (shared across experiments)
         instruments = dexpi_data.get('instruments', {})
         for inst_id, inst_data in instruments.items():
+            # Create AnalyticalInstrument entity with measurement capability metadata
             inst_entity = self.crate.add(ContextEntity(
                 self.crate,
                 f"#instrument-{inst_id}",
@@ -275,6 +302,7 @@ class OPSEECrateBuilder:
         }
         
         # Add encoding format based on extension
+        # Uses IANA media types for standard file formats
         ext = Path(file_path).suffix.lower()
         format_map = {
             '.csv': 'text/csv',
@@ -287,6 +315,7 @@ class OPSEECrateBuilder:
             properties['encodingFormat'] = format_map[ext]
         
         # Determine destination path based on data type and experiment
+        # Organizes files by experiment ID and processing status (raw vs processed)
         data_type = file_data.get('data_type', 'RawData')
         if experiment_id:
             # Organize by experiment
@@ -376,7 +405,8 @@ class OPSEECrateBuilder:
             
             if eq_entity:
                 asset_file['about'] = eq_entity
-                # Create bidirectional link
+                # Create bidirectional link: equipment -> hasRepresentation -> asset
+                # This supports navigation in both directions in the RO-Crate graph
                 if not eq_entity.get('hasRepresentation'):
                     eq_entity['hasRepresentation'] = []
                 eq_entity.append_to('hasRepresentation', asset_file)

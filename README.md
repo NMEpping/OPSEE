@@ -64,7 +64,7 @@ pip install -e .
 
 2. **Follow the interactive workflow**:
    - Enter general RO-Crate metadata (title, authors, description)
-   - Upload or reference your DEXPI XML file (parsed with **pydexpi**)
+   - Upload or reference your DEXPI XML file (parsed with **pyDEXPI** from [process-intelligence-research](https://github.com/process-intelligence-research/pyDEXPI))
    - Add 0 or more experiments with their parameters (YAML format)
    - Link analytical data files to instruments (from shared DEXPI)
    - Link CAD/geometry files to equipment (from shared DEXPI)
@@ -83,13 +83,12 @@ opsee/
 ├── README.md                      # This file
 ├── LICENSE                        # Apache 2.0 license
 ├── CONTRIBUTING.md                # Contribution guidelines
-├── requirements.txt               # Python dependencies
+├── pyproject.toml                 # Project dependencies (uv/pip)
 ├── .gitignore                     # Git ignore patterns
 ├── ro-crate-metadata.json         # RO-Crate metadata (generated/example)
 ├── opsee_workflow.ipynb           # Main interactive notebook
 ├── src/                           # Supporting Python modules
 │   ├── __init__.py
-│   ├── dexpi_parser.py            # DEXPI XML parsing utilities
 │   ├── rocrate_builder.py         # RO-Crate construction helpers
 │   └── validators.py              # Validation functions
 ├── data/                          # Experimental data (example/workspace)

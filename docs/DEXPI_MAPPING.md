@@ -335,19 +335,29 @@ After creating RO-Crate:
 
 To extract additional DEXPI attributes:
 
-1. Modify `dexpi_parser.py`
-2. Add attribute extraction in relevant methods
+1. Modify the inline helper functions (`extract_equipment()` or `extract_instruments()`) in the notebook
+2. Access attributes from the pyDEXPI model objects
 3. Store in component dictionary
 4. Map to RO-Crate properties in `rocrate_builder.py`
 
 Example:
 
 ```python
-# In dexpi_parser.py
-for attr in elem.findall('.//Attribute'):
-    attr_name = attr.get('Name')
-    attr_value = attr.get('Value')
-    equipment[eq_id][attr_name.lower()] = attr_value
+# In notebook helper function extract_equipment()
+for eq in dexpi_model.conceptualModel.taggedPlantItems:
+    eq_id = str(eq.id) if hasattr(eq, 'id') else str(id(eq))
+    
+    # Extract custom attributes if available
+    volume = eq.volume if hasattr(eq, 'volume') else None
+    material = eq.material if hasattr(eq, 'material') else None
+    
+    equipment[eq_id] = {
+        'id': eq_id,
+        'tag_name': eq.tagName if hasattr(eq, 'tagName') else eq_id,
+        'type': eq.__class__.__name__,
+        'volume': volume,
+        'material': material
+    }
 ```
 
 ### Custom RO-Crate Properties

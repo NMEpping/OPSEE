@@ -56,7 +56,9 @@ def validate_crate(metadata_path: str) -> Dict[str, Any]:
         
         graph = metadata['@graph']
         
-        # Check for required entities
+        # Check for required entities following RO-Crate 1.1 specification
+        # Root entity ('./')  describes the dataset
+        # Metadata descriptor describes the metadata file itself
         root_entity = None
         metadata_entity = None
         
@@ -245,6 +247,7 @@ def validate_file_links(metadata_path: str, crate_root: str) -> Dict[str, Any]:
         
         # Find all File entities
         for entity in graph:
+            # Normalize @type to list for consistent processing
             entity_type = entity.get('@type', [])
             if not isinstance(entity_type, list):
                 entity_type = [entity_type]
@@ -291,6 +294,7 @@ def comprehensive_validation(crate_dir: str) -> Dict[str, Any]:
     }
     
     # Check if DEXPI file exists and validate
+    # Automatically discovers DEXPI files by conformsTo property
     try:
         with open(metadata_path, 'r') as f:
             metadata = json.load(f)

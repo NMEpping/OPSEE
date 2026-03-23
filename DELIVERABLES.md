@@ -140,7 +140,8 @@ The `opsee_workflow.ipynb` notebook guides users through five stages:
 - Load button: Parse YAML parameters
 
 **Processing**:
-- `DexpiParser` extracts equipment and instruments from XML
+- pyDEXPI `ProteusSerializer` loads DEXPI model directly
+- Inline helper functions extract equipment and instruments
 - YAML parser loads experimental conditions
 - Extracted data displayed for user review
 
