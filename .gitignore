@@ -48,6 +48,30 @@ htmlcov/
 
 # RO-Crate outputs (except template)
 ro-crate-metadata.json
+
+# Type checking & linting
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# Build & packaging
+*.tar.gz
+*.zip
+site/
+
+# Editor backups
+*.bak
+*.orig
+
+# OS files
+Thumbs.db
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
 ro-crate-preview.html
 ro-crate-preview_files/
 
