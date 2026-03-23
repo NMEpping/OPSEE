@@ -356,18 +356,30 @@ class OPSEECrateBuilder:
         Returns:
             The created experiment entity
         """
+        import json
+        
         entity_id = f'#experiment-{experiment_id}' if experiment_id else '#experiment'
+        
+        # Convert nested dicts to JSON strings to avoid RO-Crate validation errors
+        # RO-Crate doesn't allow arbitrary nested objects without @id fields
+        exp_properties = {
+            '@type': 'ChemicalExperiment',
+            'name': params.get('experiment', {}).get('title', 'Experiment'),
+            'description': params.get('experiment', {}).get('description', '')
+        }
+        
+        # Add conditions as JSON string if present
+        if params.get('conditions'):
+            exp_properties['experimentalConditions'] = json.dumps(params['conditions'], indent=2)
+        
+        # Add methodology as JSON string if present
+        if params.get('methodology'):
+            exp_properties['methodology'] = json.dumps(params['methodology'], indent=2)
         
         exp_entity = self.crate.add(ContextEntity(
             self.crate,
             entity_id,
-            properties={
-                '@type': 'ChemicalExperiment',
-                'name': params.get('experiment', {}).get('title', 'Experiment'),
-                'description': params.get('experiment', {}).get('description', ''),
-                'experimentalConditions': params.get('conditions', {}),
-                'methodology': params.get('methodology', {})
-            }
+            properties=exp_properties
         ))
         
         # Link experiment to root (for single experiment mode)
