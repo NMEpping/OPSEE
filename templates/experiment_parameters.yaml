@@ -1,0 +1,145 @@
+# Experimental Parameters Template
+# YAML format for chemical and bioprocess engineering experiments
+
+experiment:
+  title: "Batch Reactor Experiment - n-Butanol Production"
+  description: "Investigation of n-butanol production in a CSTR using acetone-butanol-ethanol fermentation"
+  start_date: "2024-03-15"
+  end_date: "2024-03-16"
+  principal_investigator: "Dr. Jane Smith"
+  project_code: "PROJ-2024-001"
+
+# Process conditions
+conditions:
+  reactor:
+    type: "CSTR"
+    volume_L: 5.0
+    material: "Stainless Steel 316"
+    
+  temperature:
+    value: 35
+    unit: "°C"
+    control: "PID"
+    setpoint: 35
+    tolerance: 0.5
+    
+  pressure:
+    value: 1.013
+    unit: "bar"
+    control: "atmospheric"
+    
+  pH:
+    value: 5.5
+    unit: "pH"
+    control: "manual addition of NaOH/HCl"
+    target: 5.5
+    tolerance: 0.2
+    
+  agitation:
+    value: 200
+    unit: "rpm"
+    type: "magnetic stirrer"
+    
+  duration:
+    value: 48
+    unit: "hours"
+
+# Feed composition
+feed:
+  substrate:
+    - name: "Glucose"
+      concentration: 60
+      unit: "g/L"
+    - name: "Yeast extract"
+      concentration: 5
+      unit: "g/L"
+    - name: "Peptone"
+      concentration: 2
+      unit: "g/L"
+      
+  inoculum:
+    organism: "Clostridium acetobutylicum"
+    strain: "ATCC 824"
+    concentration: 10
+    unit: "%v/v"
+
+# Sampling strategy
+sampling:
+  frequency:
+    value: 6
+    unit: "hours"
+  points:
+    - time: 0
+      type: "initial"
+    - time: 6
+      type: "early exponential"
+    - time: 12
+      type: "mid exponential"
+    - time: 24
+      type: "stationary"
+    - time: 48
+      type: "final"
+      
+  analyses:
+    - type: "GC"
+      target: "Butanol, Acetone, Ethanol"
+      method: "HS-GC-FID"
+      instrument_tag: "GC-001"
+    - type: "HPLC"
+      target: "Glucose, Organic acids"
+      method: "HPLC-RID"
+      instrument_tag: "HPLC-001"
+    - type: "Spectrophotometry"
+      target: "Optical density"
+      wavelength: 600
+      unit: "nm"
+      instrument_tag: "SPEC-001"
+
+# Expected outputs
+outputs:
+  primary_product:
+    name: "n-Butanol"
+    target_concentration: 12
+    unit: "g/L"
+    
+  byproducts:
+    - name: "Acetone"
+      expected_concentration: 6
+      unit: "g/L"
+    - name: "Ethanol"
+      expected_concentration: 2
+      unit: "g/L"
+
+# Quality control
+quality_control:
+  sterility_check: true
+  blank_runs: 2
+  replicate_runs: 3
+  calibration_date: "2024-03-10"
+  calibration_valid_until: "2024-06-10"
+
+# Safety and compliance
+safety:
+  risk_assessment: "RA-2024-001"
+  ppe_required: "Lab coat, safety glasses, gloves"
+  ventilation: "Fume hood required for volatile organics"
+  waste_disposal: "Organic waste stream W-BIO-001"
+  
+compliance:
+  ethical_approval: "Not required"
+  biosafety_level: "BSL-1"
+  chemical_regulations: "Follow institutional chemical safety guidelines"
+
+# Notes
+notes: |
+  This experiment investigates the optimal fermentation conditions for n-butanol
+  production using Clostridium acetobutylicum. The focus is on maximizing butanol
+  yield while minimizing acetone and ethanol byproducts.
+  
+  Key parameters monitored: temperature, pH, substrate consumption, product formation.
+  
+  Special considerations:
+  - Maintain strict anaerobic conditions
+  - Monitor for contamination
+  - GC headspace sampling every 6 hours
+  - pH adjustment as needed to maintain 5.5 ± 0.2

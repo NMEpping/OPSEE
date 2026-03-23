@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Example DEXPI P&ID File for OPSEE -->
+<!-- Simplified representation of a batch reactor system for bioprocess engineering -->
+<PlantModel xmlns="http://www.dexpi.org/2015" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+            ModelVersion="1.0" SchemaVersion="3.2">
+    
+    <PlantInformation>
+        <Project ProjectName="n-Butanol Production Plant" ProjectID="PROJ-2024-001"/>
+        <Company CompanyName="Example Biotech University"/>
+        <CreationDate>2024-03-15</CreationDate>
+    </PlantInformation>
+    
+    <!-- Process Equipment -->
+    <Equipment ID="R-101" TagName="R-101" ComponentClass="Reactor" ComponentName="Main CSTR Reactor">
+        <Attribute Name="Volume" Value="5.0" Unit="L"/>
+        <Attribute Name="Material" Value="SS316"/>
+        <Attribute Name="Design_Pressure" Value="2.0" Unit="bar"/>
+        <Attribute Name="Design_Temperature" Value="80" Unit="°C"/>
+        <Attribute Name="Agitator_Type" Value="Magnetic"/>
+    </Equipment>
+    
+    <Equipment ID="T-101" TagName="T-101" ComponentClass="Tank" ComponentName="Feed Tank">
+        <Attribute Name="Volume" Value="20.0" Unit="L"/>
+        <Attribute Name="Material" Value="SS304"/>
+    </Equipment>
+    
+    <Equipment ID="T-102" TagName="T-102" ComponentClass="Tank" ComponentName="Product Tank">
+        <Attribute Name="Volume" Value="10.0" Unit="L"/>
+        <Attribute Name="Material" Value="SS304"/>
+    </Equipment>
+    
+    <Equipment ID="P-101" TagName="P-101" ComponentClass="Pump" ComponentName="Feed Pump">
+        <Attribute Name="Type" Value="Peristaltic"/>
+        <Attribute Name="FlowRate_Max" Value="100" Unit="mL/min"/>
+    </Equipment>
+    
+    <Equipment ID="HX-101" TagName="HX-101" ComponentClass="HeatExchanger" ComponentName="Cooling Jacket">
+        <Attribute Name="Type" Value="Jacket"/>
+        <Attribute Name="CoolingMedium" Value="Water"/>
+    </Equipment>
+    
+    <!-- Analytical Instruments and Actuating Systems -->
+    <ActuatingSystem ID="GC-001" TagName="GC-001" ComponentClass="AnalyticalInstrument" 
+                     ComponentName="Gas Chromatograph">
+        <Attribute Name="Manufacturer" Value="Agilent"/>
+        <Attribute Name="Model" Value="7890B"/>
+        <Attribute Name="Detector" Value="FID"/>
+        <Attribute Name="Function" Value="Volatile Organics Analysis"/>
+    </ActuatingSystem>
+    
+    <ActuatingSystem ID="HPLC-001" TagName="HPLC-001" ComponentClass="AnalyticalInstrument" 
+                     ComponentName="HPLC System">
+        <Attribute Name="Manufacturer" Value="Shimadzu"/>
+        <Attribute Name="Model" Value="LC-2030"/>
+        <Attribute Name="Detector" Value="RID"/>
+        <Attribute Name="Function" Value="Sugar and Acid Analysis"/>
+    </ActuatingSystem>
+    
+    <ActuatingSystem ID="SPEC-001" TagName="SPEC-001" ComponentClass="AnalyticalInstrument" 
+                     ComponentName="Spectrophotometer">
+        <Attribute Name="Manufacturer" Value="Thermo Fisher"/>
+        <Attribute Name="Model" Value="NanoDrop"/>
+        <Attribute Name="Function" Value="Optical Density Measurement"/>
+    </ActuatingSystem>
+    
+    <!-- Temperature Control -->
+    <ActuatingSystem ID="TIC-101" TagName="TIC-101" ComponentClass="Controller" 
+                     ComponentName="Temperature Controller">
+        <Attribute Name="ControlType" Value="PID"/>
+        <Attribute Name="Setpoint" Value="35" Unit="°C"/>
+        <Attribute Name="ControlledEquipment" Value="R-101"/>
+    </ActuatingSystem>
+    
+    <MeasuringEquipment ID="TE-101" TagName="TE-101" ComponentClass="TemperatureSensor" 
+                       ComponentName="Reactor Temperature">
+        <Attribute Name="Type" Value="Pt100"/>
+        <Attribute Name="Range_Min" Value="0" Unit="°C"/>
+        <Attribute Name="Range_Max" Value="100" Unit="°C"/>
+        <Attribute Name="Accuracy" Value="0.1" Unit="°C"/>
+    </MeasuringEquipment>
+    
+    <!-- pH Control -->
+    <ActuatingSystem ID="PIC-101" TagName="PIC-101" ComponentClass="Controller" 
+                     ComponentName="pH Controller">
+        <Attribute Name="ControlType" Value="OnOff"/>
+        <Attribute Name="Setpoint" Value="5.5" Unit="pH"/>
+    </ActuatingSystem>
+    
+    <MeasuringEquipment ID="PE-101" TagName="PE-101" ComponentClass="pHSensor" 
+                       ComponentName="Reactor pH">
+        <Attribute Name="Type" Value="Glass electrode"/>
+        <Attribute Name="Range_Min" Value="0" Unit="pH"/>
+        <Attribute Name="Range_Max" Value="14" Unit="pH"/>
+    </MeasuringEquipment>
+    
+    <!-- Pressure Measurement -->
+    <MeasuringEquipment ID="PI-101" TagName="PI-101" ComponentClass="PressureSensor" 
+                       ComponentName="Reactor Pressure">
+        <Attribute Name="Type" Value="Diaphragm"/>
+        <Attribute Name="Range_Max" Value="2" Unit="bar"/>
+    </MeasuringEquipment>
+    
+    <!-- Agitation Control -->
+    <ActuatingSystem ID="SC-101" TagName="SC-101" ComponentClass="Controller" 
+                     ComponentName="Stirrer Controller">
+        <Attribute Name="ControlType" Value="Speed"/>
+        <Attribute Name="Setpoint" Value="200" Unit="rpm"/>
+    </ActuatingSystem>
+    
+    <!-- Sampling Points (Nozzles) -->
+    <Nozzle ID="SP-R101-01" TagName="SP-R101-01" ComponentName="Reactor Sample Port 1">
+        <Attribute Name="Location" Value="Top"/>
+        <Attribute Name="Size" Value="6" Unit="mm"/>
+    </Nozzle>
+    
+    <Nozzle ID="SP-R101-02" TagName="SP-R101-02" ComponentName="Reactor Sample Port 2">
+        <Attribute Name="Location" Value="Side"/>
+        <Attribute Name="Size" Value="6" Unit="mm"/>
+    </Nozzle>
+    
+    <!-- Piping Network (simplified) -->
+    <PipingNetworkSegment ID="S-101" TagName="S-101" ComponentName="Feed Line">
+        <Attribute Name="FromEquipment" Value="T-101"/>
+        <Attribute Name="ToEquipment" Value="R-101"/>
+        <Attribute Name="Size" Value="10" Unit="mm"/>
+    </PipingNetworkSegment>
+    
+    <PipingNetworkSegment ID="S-102" TagName="S-102" ComponentName="Product Line">
+        <Attribute Name="FromEquipment" Value="R-101"/>
+        <Attribute Name="ToEquipment" Value="T-102"/>
+        <Attribute Name="Size" Value="10" Unit="mm"/>
+    </PipingNetworkSegment>
+    
+</PlantModel>

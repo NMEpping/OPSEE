@@ -1,0 +1,245 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://w3id.org/opsee/ro-crate-profile/chemical-engineering/1.0/schema",
+  "title": "OPSEE RO-Crate Profile for Chemical and Bioprocess Engineering",
+  "description": "JSON Schema for validating RO-Crates that conform to the OPSEE profile for chemical and bioprocess engineering experiments",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["@context", "@graph"],
+  "properties": {
+    "@context": {
+      "description": "JSON-LD context",
+      "anyOf": [
+        {"type": "string"},
+        {"type": "array"},
+        {"type": "object"}
+      ]
+    },
+    "@graph": {
+      "description": "Array of entities in the RO-Crate",
+      "type": "array",
+      "minItems": 2,
+      "contains": {
+        "type": "object",
+        "properties": {
+          "@id": {"const": "./"},
+          "@type": {"const": "Dataset"}
+        },
+        "required": ["@id", "@type"]
+      }
+    }
+  },
+  "definitions": {
+    "Entity": {
+      "type": "object",
+      "required": ["@id", "@type"],
+      "properties": {
+        "@id": {
+          "type": "string",
+          "description": "Unique identifier for the entity"
+        },
+        "@type": {
+          "description": "Type(s) of the entity",
+          "oneOf": [
+            {"type": "string"},
+            {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          ]
+        }
+      }
+    },
+    "ChemicalExperiment": {
+      "allOf": [
+        {"$ref": "#/definitions/Entity"}
+      ],
+      "properties": {
+        "@type": {"const": "ChemicalExperiment"},
+        "name": {
+          "type": "string",
+          "description": "Name of the experiment"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the experiment"
+        },
+        "experimentalConditions": {
+          "type": "object",
+          "description": "Operating conditions for the experiment"
+        },
+        "methodology": {
+          "description": "Experimental methodology",
+          "oneOf": [
+            {"type": "string"},
+            {"type": "object"}
+          ]
+        }
+      },
+      "required": ["name"]
+    },
+    "ProcessEquipment": {
+      "allOf": [
+        {"$ref": "#/definitions/Entity"}
+      ],
+      "properties": {
+        "@type": {"const": "ProcessEquipment"},
+        "name": {
+          "type": "string",
+          "description": "Name of the equipment"
+        },
+        "identifier": {
+          "type": "string",
+          "description": "Equipment tag name from P&ID"
+        },
+        "additionalType": {
+          "type": "string",
+          "description": "Specific equipment type (Reactor, Tank, etc.)"
+        },
+        "isDefinedIn": {
+          "description": "Reference to DEXPI file",
+          "oneOf": [
+            {"type": "string"},
+            {"type": "object"}
+          ]
+        },
+        "hasRepresentation": {
+          "description": "CAD models or drawings of the equipment",
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {"type": "string"},
+              {"type": "object"}
+            ]
+          }
+        }
+      },
+      "required": ["name", "identifier"]
+    },
+    "AnalyticalInstrument": {
+      "allOf": [
+        {"$ref": "#/definitions/Entity"}
+      ],
+      "properties": {
+        "@type": {"const": "AnalyticalInstrument"},
+        "name": {
+          "type": "string",
+          "description": "Name of the instrument"
+        },
+        "identifier": {
+          "type": "string",
+          "description": "Instrument tag name from P&ID"
+        },
+        "additionalType": {
+          "type": "string",
+          "description": "Type of analytical instrument (GC, HPLC, etc.)"
+        },
+        "isDefinedIn": {
+          "description": "Reference to DEXPI file",
+          "oneOf": [
+            {"type": "string"},
+            {"type": "object"}
+          ]
+        }
+      },
+      "required": ["name", "identifier"]
+    },
+    "AnalyticalData": {
+      "allOf": [
+        {"$ref": "#/definitions/Entity"}
+      ],
+      "properties": {
+        "@type": {
+          "type": "array",
+          "contains": {"const": "AnalyticalData"},
+          "minItems": 2
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "encodingFormat": {
+          "type": "string",
+          "description": "MIME type of the file"
+        },
+        "additionalType": {
+          "type": "string",
+          "enum": ["RawData", "CalibrationData", "ProcessedData", "QualityControlData"],
+          "description": "Classification of analytical data"
+        },
+        "instrument": {
+          "description": "Instrument that generated the data",
+          "oneOf": [
+            {"type": "string"},
+            {"type": "object"}
+          ]
+        },
+        "wasGeneratedBy": {
+          "description": "Provenance link to instrument",
+          "oneOf": [
+            {"type": "string"},
+            {"type": "object"}
+          ]
+        }
+      },
+      "required": ["name", "additionalType"]
+    },
+    "EngineeringAsset": {
+      "allOf": [
+        {"$ref": "#/definitions/Entity"}
+      ],
+      "properties": {
+        "@type": {
+          "type": "array",
+          "contains": {"const": "EngineeringAsset"},
+          "minItems": 2
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "encodingFormat": {
+          "type": "string",
+          "description": "MIME type of the file"
+        },
+        "additionalType": {
+          "type": "string",
+          "enum": ["CADModel", "TechnicalDrawing", "GeometryFile", "Specification", "Photo"],
+          "description": "Type of engineering asset"
+        },
+        "about": {
+          "description": "Equipment this asset represents",
+          "oneOf": [
+            {"type": "string"},
+            {"type": "object"}
+          ]
+        }
+      },
+      "required": ["name", "additionalType", "about"]
+    }
+  },
+  "validation": {
+    "required_entity_types": [
+      "ChemicalExperiment",
+      "ProcessEquipment",
+      "AnalyticalInstrument"
+    ],
+    "recommended_properties": {
+      "root_dataset": ["name", "description", "author", "license", "dateCreated"],
+      "file": ["name", "encodingFormat", "description"],
+      "person": ["name", "affiliation"]
+    }
+  },
+  "profile_metadata": {
+    "profile_id": "https://w3id.org/opsee/ro-crate-profile/chemical-engineering/1.0",
+    "profile_version": "1.0.0",
+    "profile_name": "OPSEE Chemical Engineering Profile",
+    "release_date": "2026-03-23",
+    "maintainer": "OPSEE Community",
+    "parent_profile": "https://w3id.org/ro/crate/1.2"
+  }
+}
