@@ -368,17 +368,19 @@ class DEXPISection:
 class ExperimentConfigSection:
     """Encapsulates experiment configuration with self-contained widgets and callbacks."""
     
-    def __init__(self, crate_data: CrateData, default_path: str = None, 
-                 exp_id: str = 'exp_1', exp_name: str = ''):
+    def __init__(self, crate_data: CrateData, ui_manager: 'WorkflowUI', 
+                 default_path: str = None, exp_id: str = 'exp_1', exp_name: str = ''):
         """Initialize experiment configuration section.
         
         Args:
             crate_data: CrateData instance to store experiments
+            ui_manager: WorkflowUI instance to update current_experiment
             default_path: Default directory for file browser
             exp_id: Initial experiment ID
             exp_name: Initial experiment name
         """
         self.crate_data = crate_data
+        self.ui_manager = ui_manager
         default_path = default_path or os.path.join(os.getcwd(), 'templates')
         self.current_experiment = None
         
@@ -437,6 +439,9 @@ class ExperimentConfigSection:
                 self.current_experiment = self.crate_data.add_experiment(self.w_exp_id.value)
                 self.current_experiment.experimental_parameters = params
                 
+                # Update WorkflowUI's current_experiment so other sections can access it
+                self.ui_manager.current_experiment = self.current_experiment
+                
                 print(f"✓ Parameters loaded for {self.w_exp_id.value}")
                 if params.get('experiment'):
                     print(f"  Experiment: {params['experiment'].get('title', 'N/A')}")
@@ -455,6 +460,452 @@ class ExperimentConfigSection:
             widgets.HTML("<p><strong>Select experiment parameters file:</strong></p>"),
             self.fc_params,
             self.btn_load_params,
+            self.out_status
+        ])
+
+
+class AnalyticalDataFilesSection:
+    """Encapsulates analytical data file management."""
+    
+    def __init__(self, crate_data: CrateData, ui: 'WorkflowUI'):
+        """Initialize analytical data files section.
+        
+        Args:
+            crate_data: CrateData instance
+            ui: WorkflowUI instance for accessing DEXPI options
+        """
+        self.crate_data = crate_data
+        self.ui = ui
+        
+        self.fc = FileChooser(
+            path=os.path.join(os.getcwd(), 'example'),
+            title='<b>Select data file:</b>',
+            show_hidden=False
+        )
+        self.fc.use_dir_icons = True
+        
+        self.w_instrument = widgets.Dropdown(
+            options=ui.get_instrument_options(),
+            description='Instrument:',
+            style={'description_width': '150px'},
+            layout=widgets.Layout(width='600px')
+        )
+        
+        self.w_data_type = widgets.Dropdown(
+            options=['RawData', 'ProcessedData', 'CalibrationData', 'DerivedData'],
+            value='RawData',
+            description='Data Type:',
+            style={'description_width': '150px'}
+        )
+        
+        self.w_description = widgets.Textarea(
+            placeholder='Description of the data file...',
+            description='Description:',
+            style={'description_width': '150px'},
+            layout=widgets.Layout(width='700px', height='80px')
+        )
+        
+        self.btn_add = widgets.Button(
+            description='Add Data File',
+            button_style='success',
+            icon='plus',
+            layout=widgets.Layout(width='130px')
+        )
+        
+        self.btn_refresh = widgets.Button(
+            description='Refresh Instruments',
+            button_style='warning',
+            icon='refresh',
+            layout=widgets.Layout(width='160px')
+        )
+        
+        self.out_status = widgets.Output()
+        self.btn_add.on_click(self._on_add)
+        self.btn_refresh.on_click(self._on_refresh)
+    
+    def _on_refresh(self, b):
+        with self.out_status:
+            clear_output(wait=True)
+            self.w_instrument.options = self.ui.get_instrument_options()
+            print("✅ Instrument list refreshed from shared DEXPI")
+    
+    def _on_add(self, b):
+        with self.out_status:
+            clear_output()
+            
+            if not self.fc.selected:
+                print("❌ Please select a data file using the file browser above")
+                return
+            
+            if not self.w_instrument.value:
+                print("❌ Please select an instrument (load DEXPI first)")
+                return
+            
+            if self.ui.current_experiment is None:
+                print("❌ Please load experiment parameters first")
+                return
+            
+            self.ui.current_experiment.add_analytical_file(
+                path=self.fc.selected,
+                instrument_id=self.w_instrument.value,
+                data_type=self.w_data_type.value,
+                description=self.w_description.value
+            )
+            
+            print(f"✅ Added data file: {Path(self.fc.selected).name}")
+            print(f"   Total files: {len(self.ui.current_experiment.analytical_files)}")
+            
+            self.fc.reset()
+            self.w_description.value = ''
+    
+    def render(self) -> widgets.VBox:
+        return widgets.VBox([
+            widgets.HTML("<h4>Analytical Data Files</h4>"),
+            widgets.HTML("<p>💡 <em>Browse to select data files - they will be copied into the RO-Crate.</em></p>"),
+            self.fc,
+            self.w_instrument,
+            self.w_data_type,
+            self.w_description,
+            widgets.HBox([self.btn_add, self.btn_refresh]),
+            self.out_status
+        ])
+
+
+class EngineeringAssetsSection:
+    """Encapsulates engineering assets management."""
+    
+    def __init__(self, crate_data: CrateData, ui: 'WorkflowUI'):
+        """Initialize engineering assets section.
+        
+        Args:
+            crate_data: CrateData instance
+            ui: WorkflowUI instance for accessing DEXPI options
+        """
+        self.crate_data = crate_data
+        self.ui = ui
+        
+        self.fc = FileChooser(
+            path=os.path.join(os.getcwd(), 'example'),
+            title='<b>Select engineering asset file:</b>',
+            show_hidden=False
+        )
+        self.fc.use_dir_icons = True
+        
+        self.w_equipment = widgets.Dropdown(
+            options=ui.get_equipment_options(),
+            description='Equipment:',
+            style={'description_width': '150px'},
+            layout=widgets.Layout(width='600px')
+        )
+        
+        self.w_asset_type = widgets.Dropdown(
+            options=['CADModel', 'TechnicalDrawing', 'GeometryFile', 'Specification', 'Photo'],
+            value='Photo',
+            description='Asset Type:',
+            style={'description_width': '150px'}
+        )
+        
+        self.w_description = widgets.Textarea(
+            placeholder='Description of the engineering asset...',
+            description='Description:',
+            style={'description_width': '150px'},
+            layout=widgets.Layout(width='700px', height='80px')
+        )
+        
+        self.btn_add = widgets.Button(
+            description='Add Asset',
+            button_style='success',
+            icon='plus',
+            layout=widgets.Layout(width='120px')
+        )
+        
+        self.btn_refresh = widgets.Button(
+            description='Refresh Equipment',
+            button_style='warning',
+            icon='refresh',
+            layout=widgets.Layout(width='160px')
+        )
+        
+        self.out_status = widgets.Output()
+        self.btn_add.on_click(self._on_add)
+        self.btn_refresh.on_click(self._on_refresh)
+    
+    def _on_refresh(self, b):
+        with self.out_status:
+            clear_output(wait=True)
+            self.w_equipment.options = self.ui.get_equipment_options()
+            print("✅ Equipment list refreshed from shared DEXPI")
+    
+    def _on_add(self, b):
+        with self.out_status:
+            clear_output()
+            
+            if not self.fc.selected:
+                print("❌ Please select an asset file using the file browser above")
+                return
+            
+            if not self.w_equipment.value:
+                print("❌ Please select equipment (load DEXPI first)")
+                return
+            
+            if self.ui.current_experiment is None:
+                print("❌ Please load experiment parameters first")
+                return
+            
+            self.ui.current_experiment.add_engineering_asset(
+                path=self.fc.selected,
+                equipment_id=self.w_equipment.value,
+                asset_type=self.w_asset_type.value,
+                description=self.w_description.value
+            )
+            
+            print(f"✅ Added engineering asset: {Path(self.fc.selected).name}")
+            print(f"   Total assets: {len(self.ui.current_experiment.engineering_assets)}")
+            
+            self.fc.reset()
+            self.w_description.value = ''
+    
+    def render(self) -> widgets.VBox:
+        return widgets.VBox([
+            widgets.HTML("<h4>Engineering Assets</h4>"),
+            widgets.HTML("<p>💡 <em>Browse to select engineering assets - they will be copied into the RO-Crate.</em></p>"),
+            self.fc,
+            self.w_equipment,
+            self.w_asset_type,
+            self.w_description,
+            widgets.HBox([self.btn_add, self.btn_refresh]),
+            self.out_status
+        ])
+
+
+class ExperimentFinalizationSection:
+    """Encapsulates experiment finalization UI."""
+    
+    def __init__(self, crate_data: CrateData, ui: 'WorkflowUI'):
+        """Initialize experiment finalization section.
+        
+        Args:
+            crate_data: CrateData instance
+            ui: WorkflowUI instance
+        """
+        self.crate_data = crate_data
+        self.ui = ui
+        
+        self.btn_add = widgets.Button(
+            description='Add Experiment to Crate',
+            button_style='primary',
+            icon='check',
+            layout=widgets.Layout(width='250px')
+        )
+        
+        self.btn_reset = widgets.Button(
+            description='Reset for New Experiment',
+            button_style='warning',
+            icon='refresh'
+        )
+        
+        self.btn_skip = widgets.Button(
+            description='Skip (No Experiments)',
+            button_style='',
+            icon='forward'
+        )
+        
+        self.out_status = widgets.Output()
+        self.btn_add.on_click(self._on_add)
+        self.btn_reset.on_click(self._on_reset)
+        self.btn_skip.on_click(self._on_skip)
+    
+    def _on_add(self, b):
+        with self.out_status:
+            clear_output()
+            
+            if self.ui.current_experiment is None:
+                print("⚠ Please load experiment parameters first")
+                return
+            
+            print(f"✓ Experiment '{self.ui.current_experiment.id}' added to crate")
+            if self.ui.current_experiment.experimental_parameters:
+                title = self.ui.current_experiment.experimental_parameters.get('experiment', {}).get('title', 'N/A')
+                print(f"  Parameters: {title}")
+            print(f"  Analytical files: {len(self.ui.current_experiment.analytical_files)}")
+            print(f"  Engineering assets: {len(self.ui.current_experiment.engineering_assets)}")
+            print(f"\n  Total experiments in crate: {len(self.crate_data.experiments)}")
+            print("\n  ⚠ Remember to reset for next experiment!")
+    
+    def _on_reset(self, b):
+        with self.out_status:
+            clear_output()
+            next_num = len(self.crate_data.experiments) + 1
+            self.ui.current_experiment = None
+            print(f"✓ Reset complete. Ready for experiment {next_num}")
+    
+    def _on_skip(self, b):
+        with self.out_status:
+            clear_output()
+            print("ℹ️ Skipping experiments - RO-Crate will contain only setup (DEXPI)")
+    
+    def render(self) -> widgets.VBox:
+        return widgets.VBox([
+            widgets.HTML("<h4>Finalize Experiment</h4>"),
+            widgets.HTML("<p><strong>Tip:</strong> You can add 0 to many experiments.</p>"),
+            widgets.HBox([self.btn_add, self.btn_reset, self.btn_skip]),
+            self.out_status
+        ])
+
+
+class ReviewMetadataSection:
+    """Encapsulates metadata review UI."""
+    
+    def __init__(self, crate_data: CrateData):
+        """Initialize review metadata section.
+        
+        Args:
+            crate_data: CrateData instance
+        """
+        self.crate_data = crate_data
+        
+        self.btn_review = widgets.Button(
+            description='Review Metadata',
+            button_style='info',
+            icon='eye'
+        )
+        
+        self.out_review = widgets.Output()
+        self.btn_review.on_click(self._on_review)
+    
+    def _on_review(self, b):
+        with self.out_review:
+            clear_output()
+            print("=" * 70)
+            print("RO-CRATE METADATA REVIEW")
+            print("=" * 70)
+            
+            print(f"\n📦 GENERAL INFORMATION")
+            print(f"  Name: {self.crate_data.general.get('name', 'Not set')}")
+            print(f"  Keywords: {', '.join(self.crate_data.general.get('keywords', []))}")
+            print(f"  License: {self.crate_data.general.get('license', 'Not set')}")
+            
+            print(f"\n👥 AUTHORS: {len(self.crate_data.authors)}")
+            for author in self.crate_data.authors:
+                print(f"  - {author['name']} ({author['role']})")
+            
+            print(f"\n🏭 SHARED EXPERIMENTAL SETUP")
+            if self.crate_data.dexpi:
+                print(f"  DEXPI: {Path(self.crate_data.dexpi['path']).name}")
+                print(f"  Equipment: {len(self.crate_data.dexpi.get('equipment', {}))} items")
+                print(f"  Instruments: {len(self.crate_data.dexpi.get('instruments', {}))} items")
+            else:
+                print("  ⚠ No DEXPI loaded")
+            
+            print(f"\n🔬 EXPERIMENTS: {len(self.crate_data.experiments)}")
+            if not self.crate_data.experiments:
+                print("  ℹ️ No experiments defined (setup-only RO-Crate)")
+            else:
+                for i, exp in enumerate(self.crate_data.experiments, 1):
+                    print(f"\n  Experiment {i}: {exp.id}")
+                    if exp.experimental_parameters:
+                        title = exp.experimental_parameters.get('experiment', {}).get('title', 'N/A')
+                        print(f"    Title: {title}")
+                    print(f"    Analytical files: {len(exp.analytical_files)}")
+                    print(f"    Engineering assets: {len(exp.engineering_assets)}")
+            
+            print("\n" + "=" * 70)
+    
+    def render(self) -> widgets.VBox:
+        return widgets.VBox([
+            widgets.HTML("<h3>Review Metadata</h3>"),
+            self.btn_review,
+            self.out_review
+        ])
+
+
+class ExportCrateSection:
+    """Encapsulates RO-Crate export UI."""
+    
+    def __init__(self, crate_data: CrateData):
+        """Initialize export crate section.
+        
+        Args:
+            crate_data: CrateData instance
+        """
+        self.crate_data = crate_data
+        
+        self.w_validate = widgets.Checkbox(
+            value=True,
+            description='Validate after export',
+            style={'description_width': 'initial'}
+        )
+        
+        self.btn_export = widgets.Button(
+            description='Export RO-Crate',
+            button_style='success',
+            icon='download',
+            layout=widgets.Layout(width='200px')
+        )
+        
+        self.out_status = widgets.Output()
+        self.btn_export.on_click(self._on_export)
+    
+    def _on_export(self, b):
+        with self.out_status:
+            clear_output()
+            try:
+                from .rocrate_builder import OPSEECrateBuilder
+                from .validators import validate_crate
+                
+                if not self.crate_data.output_directory:
+                    print("❌ Error: No output directory selected!")
+                    print("💡 Please go back to Section 0 and create/select an output directory first.")
+                    return
+                
+                output_path = self.crate_data.output_directory
+                
+                print("🚀 Building RO-Crate...")
+                print(f"📁 Output directory: {output_path}")
+                
+                # Build the crate
+                builder = OPSEECrateBuilder(output_dir=output_path)
+                crate = builder.build_crate(self.crate_data.to_dict())
+                
+                # Write to disk
+                print(f"📝 Writing metadata to {output_path}...")
+                crate.write(output_path)
+                
+                print("\n✅ RO-Crate exported successfully!")
+                print(f"\n📄 Files created:")
+                print(f"  - {output_path}/ro-crate-metadata.json")
+                print(f"  - {output_path}/ro-crate-preview.html")
+                
+                # Validate if requested
+                if self.w_validate.value:
+                    print("\n🔍 Validating RO-Crate...")
+                    validation_result = validate_crate(f"{output_path}/ro-crate-metadata.json")
+                    if validation_result['valid']:
+                        print("✓ Validation passed")
+                    else:
+                        print("⚠ Validation warnings:")
+                        for warning in validation_result.get('warnings', []):
+                            print(f"  - {warning}")
+                
+                print("\n" + "="*60)
+                print("Next steps:")
+                print("  1. Review ro-crate-metadata.json")
+                print("  2. Open ro-crate-preview.html in a browser")
+                print("  3. Share or publish your RO-Crate")
+                print("="*60)
+                
+            except Exception as e:
+                print(f"\n✗ Error exporting crate: {str(e)}")
+                import traceback
+                traceback.print_exc()
+    
+    def render(self) -> widgets.VBox:
+        output_dir_display = self.crate_data.output_directory or 'Not set - please complete Section 0 first!'
+        return widgets.VBox([
+            widgets.HTML("<h3>Export RO-Crate</h3>"),
+            widgets.HTML(f"<p>📁 <strong>Output directory:</strong> <code>{output_dir_display}</code></p>"),
+            self.w_validate,
+            self.btn_export,
             self.out_status
         ])
 
@@ -542,10 +993,48 @@ class WorkflowUI:
         Returns:
             ExperimentConfigSection instance
         """
-        section = ExperimentConfigSection(self.crate_data, default_path, exp_id, exp_name)
-        # Keep current_experiment in sync
-        section.current_experiment = self.current_experiment
+        section = ExperimentConfigSection(self.crate_data, self, default_path, exp_id, exp_name)
         return section
+    
+    def get_analytical_data_files_section(self) -> AnalyticalDataFilesSection:
+        """Create analytical data files section.
+        
+        Returns:
+            AnalyticalDataFilesSection instance
+        """
+        return AnalyticalDataFilesSection(self.crate_data, self)
+    
+    def get_engineering_assets_section(self) -> EngineeringAssetsSection:
+        """Create engineering assets section.
+        
+        Returns:
+            EngineeringAssetsSection instance
+        """
+        return EngineeringAssetsSection(self.crate_data, self)
+    
+    def get_experiment_finalization_section(self) -> ExperimentFinalizationSection:
+        """Create experiment finalization section.
+        
+        Returns:
+            ExperimentFinalizationSection instance
+        """
+        return ExperimentFinalizationSection(self.crate_data, self)
+    
+    def get_review_metadata_section(self) -> ReviewMetadataSection:
+        """Create review metadata section.
+        
+        Returns:
+            ReviewMetadataSection instance
+        """
+        return ReviewMetadataSection(self.crate_data)
+    
+    def get_export_crate_section(self) -> ExportCrateSection:
+        """Create export crate section.
+        
+        Returns:
+            ExportCrateSection instance
+        """
+        return ExportCrateSection(self.crate_data)
     
     # ========================================================================
     # Helper methods
