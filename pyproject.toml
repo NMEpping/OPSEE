@@ -11,7 +11,8 @@ authors = [
 keywords = ["research-object", "ro-crate", "dexpi", "chemical-engineering", "fair-data"]
 
 dependencies = [
-    "rocrate>=0.14.0",
+    "mdmodels>=0.2.9",
+    "rocrate>=0.14.2",
     "pydexpi>=1.1.0",
     "pyyaml>=6.0",
     "lxml>=5.0.0",

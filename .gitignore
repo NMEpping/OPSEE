@@ -108,8 +108,5 @@ dmypy.json
 # pytype
 .pytype/
 
-# test outputs
-test_rocrate/
-
-# test notebook
-test_notebook.ipynb
+# testing directory
+testing/
