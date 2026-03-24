@@ -107,3 +107,6 @@ dmypy.json
 
 # pytype
 .pytype/
+
+# test outputs
+test_rocrate/

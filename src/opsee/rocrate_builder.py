@@ -232,12 +232,16 @@ class OPSEECrateBuilder:
         else:
             logger.warning(f"Source file not found: {source}")
             raise FileNotFoundError(f"Cannot copy non-existent file: {source}")
-        
-        # Add to RO-Crate with relative path (paths are relative within crate)
+    
+        # Add to RO-Crate using ABSOLUTE path where we copied the file
+        # The rocrate library needs to find the file at write time
+        # Use dest_path parameter to specify the relative path in metadata
         return self.crate.add_file(
-            str(dest_relative_path),
+            str(dest.absolute()),
+            dest_path=dest_relative_path,
             properties=properties
         )
+
     
     def _get_media_type(self, file_path: str) -> str:
         """Determine IANA media type from file extension.
