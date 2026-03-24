@@ -8,10 +8,10 @@ Each section encapsulates its widgets, callbacks, and display logic.
 import os
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Tuple, Any
+from typing import List, Tuple
 
 import ipywidgets as widgets
-from IPython.display import display, HTML, clear_output
+from IPython.display import clear_output
 from ipyfilechooser import FileChooser
 import yaml
 
@@ -34,7 +34,6 @@ class OutputDirectorySection:
         self.default_path = default_path or os.getcwd()
         self.default_name = default_name
         
-        # Create widgets
         self.fc = FileChooser(
             path=self.default_path,
             filename=default_name,

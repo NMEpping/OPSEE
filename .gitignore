@@ -110,3 +110,6 @@ dmypy.json
 
 # test outputs
 test_rocrate/
+
+# test notebook
+test_notebook.ipynb

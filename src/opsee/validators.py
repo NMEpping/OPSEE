@@ -7,12 +7,11 @@ This module provides validation functions for:
 - OPSEE profile compliance
 """
 
-from typing import Dict, List, Tuple, Any
+from typing import Dict, Any
 from pathlib import Path
 import json
 import logging
 
-from jsonschema import validate as json_validate, ValidationError, Draft7Validator
 from lxml import etree
 
 logger = logging.getLogger(__name__)

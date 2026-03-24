@@ -5,7 +5,7 @@ This module provides utilities to construct RO-Crates with domain-specific
 metadata for chemical and bioprocess engineering.
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from pathlib import Path
 from datetime import datetime
 import logging
